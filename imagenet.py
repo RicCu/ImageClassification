@@ -24,6 +24,10 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as tv_models
+try:
+    import apex
+except:
+    print('Mixed-precision is not available.')
 
 import models as ic_models
 
@@ -70,6 +74,8 @@ parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='use pre-trained model')
+parser.add_argument('--fp16', dest='fp16', action='store_true',
+                    help='use mixed-precision training')
 parser.add_argument('--world-size', default=-1, type=int,
                     help='number of nodes for distributed training')
 parser.add_argument('--rank', default=-1, type=int,
@@ -108,6 +114,9 @@ def main():
         warnings.warn('You have chosen a specific GPU. This will completely '
                       'disable data parallelism.')
 
+    if args.fp16:
+        print("Using mixed-precision training.")
+
     if args.dist_url == "env://" and args.world_size == -1:
         args.world_size = int(os.environ["WORLD_SIZE"])
 
@@ -130,6 +139,9 @@ def main():
 def main_worker(gpu, ngpus_per_node, args):
     global best_acc1
     args.gpu = gpu
+
+    if args.fp16:
+        args.amp_handle = apex.amp.init()
 
     if args.gpu is not None:
         print("Use GPU: {} for training".format(args.gpu))
@@ -310,7 +322,12 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
-        loss.backward()
+        if args.fp16:
+            with args.amp_handle.scale_loss(loss, optimizer) as scaled_loss:
+                scaled_loss.backward()
+            # optimizer.backward(loss)
+        else:
+            loss.backward()
         optimizer.step()
 
         # measure elapsed time
