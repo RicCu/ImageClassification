@@ -11,6 +11,9 @@ import torch
 from torch import nn
 
 
+__all__ = ['mobilenetv1', 'mobilenetv2']
+
+
 def build_DepthwiseSeparableConvolution(in_channels, out_channels,
                                         kernel_size=3, stride=1, padding=1):
     return nn.Sequential(
