@@ -93,12 +93,22 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'N processes per node, which has N GPUs. This is the '
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
+parser.add_argument('--scaling-factor', default=None, type=int,
+                    help='If set, scale the learning rate and batch size by '
+                         'this factor. It also sets up progressive warmup.')
 
 best_acc1 = 0
 
 
 def main():
     args = parser.parse_args()
+
+    if args.scaling_factor is not None:
+        assert args.scaling_factor > 0
+        args.lr = args.scaling_factor * args.lr
+        args.batch_size = args.scaling_factor * args.batch_size
+        print('Scaled batch size to {} and learning rate to '
+              '{}'.format(args.batch_size, args.lr))
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -417,7 +427,12 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
+    if args.scaling_factor is not None and epoch < 5:
+        base_lr = args.lr // args.scaling_factor
+        slope = int((args.lr - base_lr) / 5)
+        lr = slope * epoch + base_lr
+    else:
+        lr = args.lr * (0.1 ** (epoch // 30))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
