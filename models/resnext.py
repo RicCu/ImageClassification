@@ -44,29 +44,28 @@ class Bottleneck(nn.Module):
                  downsample=None):
         super(Bottleneck, self).__init__()
         channels = cardinality * int(planes * base_width / 64)
-        self.conv_bottleneck = conv1x1(inplanes, channels)
-        self.bn_bottleneck = nn.BatchNorm2d(channels)
-        self.transform_conv = group_conv3x3(channels, channels, cardinality,
-                                            stride)
-        self.transform_bn = nn.BatchNorm2d(channels)
-        self.conv_expansion = conv1x1(channels, planes * self.expansion)
-        self.bn_expansion = nn.BatchNorm2d(planes * self.expansion)
+        self.conv1 = conv1x1(inplanes, channels)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.conv2 = group_conv3x3(channels, channels, cardinality, stride)
+        self.bn2 = nn.BatchNorm2d(channels)
+        self.conv3 = conv1x1(channels, planes * self.expansion)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
 
     def forward(self, x):
         identity = x
 
-        out = self.conv_bottleneck(x)
-        out = self.bn_bottleneck(out)
+        out = self.conv1(x)
+        out = self.bn1(out)
         out = self.relu(out)
 
-        out = self.transform_conv(out)
-        out = self.transform_bn(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
         out = self.relu(out)
 
-        out = self.conv_expansion(out)
-        out = self.bn_expansion(out)
+        out = self.conv3(out)
+        out = self.bn3(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
