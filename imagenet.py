@@ -98,7 +98,7 @@ parser.add_argument('--scaling-factor', default=None, type=int,
                          'this factor. It also sets up progressive warmup.')
 parser.add_argument('--zero-init-residual', dest='zero_init_residual',
                     action='store_true', help='Initialize last Batch Norm in '
-                    'each residual branch with zero')
+                    'each residual branch with zero (for ResNet and ResNeXt)')
 
 best_acc1 = 0
 
