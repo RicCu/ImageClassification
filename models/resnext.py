@@ -110,7 +110,7 @@ class ResNeXt(nn.Module):
         if zero_init_residual:
             for m in self.modules():
                 if isinstance(m, Bottleneck):
-                    nn.init.constant_(m.bn_expansion.weight, 0)
+                    nn.init.constant_(m.bn3.weight, 0)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
