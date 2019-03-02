@@ -96,6 +96,9 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 parser.add_argument('--scaling-factor', default=None, type=int,
                     help='If set, scale the learning rate and batch size by '
                          'this factor. It also sets up progressive warmup.')
+parser.add_argument('--zero-init-residual', dest='zero_init_residual',
+                    action='store_true', help='Initialize last Batch Norm in '
+                    'each residual branch with zero')
 
 best_acc1 = 0
 
@@ -166,18 +169,19 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
+    kwargs = {'zero_init_residual': args.zero_init_residual}
     if args.pretrained:
         print("=> using pre-trained model '{}'".format(args.arch))
         if args.arch in tv_models.__dict__:
-            model = tv_models.__dict__[args.arch](pretrained=True)
+            model = tv_models.__dict__[args.arch](pretrained=True, **kwargs)
         else:
-            model = ic_models.__dict__[args.arch](pretrained=True)
+            model = ic_models.__dict__[args.arch](pretrained=True, **kwargs)
     else:
         print("=> creating model '{}'".format(args.arch))
         if args.arch in tv_models.__dict__:
-            model = tv_models.__dict__[args.arch]()
+            model = tv_models.__dict__[args.arch](**kwargs)
         else:
-            model = ic_models.__dict__[args.arch]()
+            model = ic_models.__dict__[args.arch](**kwargs)
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
